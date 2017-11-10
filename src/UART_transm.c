@@ -7,27 +7,33 @@
 
 
 #include <avr/io.h>
-#define F_CPU 8000000 // set clock frekvens after pdf
-#include "delay.h"
+#define F_CPU 14745600 // set clock frekvens after pdf
+#include <util/delay.h>
 #include <stdio.h>
-#define BAUD 9600
-#include <util/setbaud.h>
+#define BAUD 115200
+#define UDDRV ((F_CPU)/(16*BAUD)-1)
+//#include <util/setbaud.h>
 
 
 void UART_init (void);
 void UART_transmitByte (unsigned char data);
 unsigned char UART_recieveByte(void);
-
+unsigned char str[12] = "420 blaze it";
+unsigned int i=0;
 int main(void)
 {
 	//DDRB = 0b00000001;
 	UART_init();
     while(1)
     {
+		_delay_ms(50);
         //TODO:: Please write your application code
-		UART_transmitByte('a');
+		UART_transmitByte(str[i++]);
+		if( i >= 12){
+			i=0;
+		}
 		//PORTB |= (1<<PINB0);
-		_delay_ms(500);
+		
 		
 		
     }
@@ -36,15 +42,15 @@ int main(void)
 void UART_init (void)
 {
 	// Set all needed register
-	PRR0 &= ~(1<<PRUSART0);
-	UBRR0H = UBRRH_VALUE;
-	UBRR0L = UBRRH_VALUE;
+	//PRR0 &= ~(1<<PRUSART0);
+	UBRR0H = (UDDRV>>8);
+	UBRR0L = UDDRV;
 	#if USE_2X
 	UCSR0A |= (1<<U2X0);
 	#else
 	UCSR0A &= ~(1<<U2X0);
 	#endif
-	UCSR0B |= ((1 << TXEN0)|(1 << RXEN0)|(0<<UCSZ02)|(0<<RXCIE0)); // set transmitter enable and receiver enable to 1 to indicate UART is ready to RX and TX
+	UCSR0B |= ((1 << TXEN0)|(1 << RXEN0));//|(0<<UCSZ02)|(0<<RXCIE0)); // set transmitter enable and receiver enable to 1 to indicate UART is ready to RX and TX
 	UCSR0C |= (1 << UCSZ00)|(1 << UCSZ10); // select UCSR0C and set data bits to 8 did not find URSEL
 	
 	
@@ -65,4 +71,5 @@ unsigned char UART_recieveByte(void)
 	return UDR0;
 	
 
+	
 }
