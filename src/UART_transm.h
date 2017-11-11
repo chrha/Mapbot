@@ -1,43 +1,19 @@
 /*
- * UART_transm.c
+ * UART_transm.h
  *
  * Created: 11/10/2017 9:07:26 AM
  *  Author: nisan016
  */ 
-
-
-#include <avr/io.h>
+//#include <avr/io.h>
 #define F_CPU 14745600 // set clock frekvens after pdf
-#include <util/delay.h>
-#include <stdio.h>
+//#include <util/delay.h>
+//#include <stdio.h>
 #define BAUD 115200
 #define UDDRV ((F_CPU)/(16*BAUD)-1)
-//#include <util/setbaud.h>
-
 
 void UART_init (void);
 void UART_transmitByte (unsigned char data);
 unsigned char UART_recieveByte(void);
-unsigned char str[12] = "420 blaze it";
-unsigned int i=0;
-int main(void)
-{
-	//DDRB = 0b00000001;
-	UART_init();
-    while(1)
-    {
-		_delay_ms(50);
-        //TODO:: Please write your application code
-		UART_transmitByte(str[i++]);
-		if( i >= 12){
-			i=0;
-		}
-		//PORTB |= (1<<PINB0);
-		
-		
-		
-    }
-}
 
 void UART_init (void)
 {
@@ -56,20 +32,17 @@ void UART_init (void)
 	
 	
 }	
-
 void UART_transmitByte (unsigned char data)
 {
 	while(!(UCSR0A & (1 << UDRE0))){} // UDRE is 1 then there is data in buffet
 	UDR0 = data; // send data to data register
 	
 }
-
 unsigned char UART_recieveByte(void)
 {
 	while(!((UCSR0A) & (1 << RXC0))); // check if we receive something
 	
 	return UDR0;
 	
-
 	
 }
