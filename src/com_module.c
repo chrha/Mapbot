@@ -1,76 +1,97 @@
+
 /*
- * GccApplication1.c
+ * UART_transm.c
  *
- * Created: 11/6/2017 3:58:21 PM
- *  Author: iliay038
+ * Created: 11/10/2017 9:07:26 AM
+ *  Author: nisan016
  */ 
-
-
 #include <avr/io.h>
-#include <avr/delay.h>
+#include <util/delay.h>
+#include <stdio.h>
 #include <avr/interrupt.h>
 
-
-
-
-//#define BAUDRATE ((F_CPU)/ (UART_BAUD* 16UL)-1) // equation for calculating UBRR value
-void uart_init(void); 
-void transmitt_data(unsigned char data); 
-unsigned char receive_data(void);
-
+#define BAUD 115200
+#define F_CPU 14745600 // set clock frekvens after pdf
+#define UDDRV ((F_CPU)/(16*BAUD)-1)
+//#include <util/setbaud.h>
+void UART_init (void);
+void UART_transmitByte (unsigned char data);
+unsigned char UART_recieveByte(void);
+unsigned char str[12] = "420 blaze it";
+unsigned int i=0;
+volatile unsigned char data_received;
 int main(void)
 {
-	DDRB |= (1<<PINB0);
-	PORTB = ~(1 << PINB0);
-	uart_init();
-	//receive_data();
+	//DDRB = 0b00000001;
+	DDRB |= (1 << PINB2);
+	PORTB &= ~(1 << PINB2);
 	
+	UART_init();
+	sei();
     while(1)
     {
-		transmitt_data('a');
-		_delay_ms(5000); 
-		//receive_data();
-		//uartrecieve();
-	
-		//unsigned char value = receive_data();
-        //TODO:: Please write your application code 
+		
+        //TODO:: Please write your application code
+		
+		
+		
+		
+		
     }
 }
-
-
-/**Initializes UART connection **/
-void uart_init(void){
-	#define BAUD 9600
-	//#define F_CPU 8000000
-	#include <util/setbaud.h>
-	UBRR0L=UBRRL_VALUE;			// set baud rate
-	UBRR0H= UBRRH_VALUE;	// shift register 8 bits to define left byte of the 2byte register
-	UCSR0B |= (1 << RXEN0) | (1 << TXEN0);	// enable transmitter and receiver
-	UCSR0C |= (1 << UCSZ01) | (1 << UCSZ00);  // Set data size of 8 bit
+ISR(USART0_RX_vect){
+	data_received= UDR0;
 	
-}
-
-/** waits until buffer UDR isn't empty,
- then loads data to register **/
-void transmitt_data(unsigned char data){
-	
-		
-	
-		
-		 while (!(UCSR0A&(1<<UDRE0)));    // Wait for previous transmissions
-		 UDR0 = data;    // Send data byte
-	
-	
-}
-
-
-/** waits until there is no longer anything to receive,
- then returns the value **/
-unsigned char receive_data(void){
-	
-	while(!(UCSR0A & (1<<RXC0))){
-		PORTB ^= (1 << PINB0);
+	if (data_received == 'a'){
+		PORTB |= (1<<PINB2);
 	}
 	
+	if(data_received == 'd'){
+		PORTB |= (1<<PINB3);
+	}
+	if(data_received == 'w') {
+		PORTB |= (1<<PINB4);
+	}
+	if(data_received == 's'){
+		PORTB |= (1<<PINB5);
+	}
+	UART_transmitByte(data_received);
+	data_received='0';
+	
+	PORTB |= (0<<PINB2);
+	PORTB |= (0<<PINB3);
+	PORTB |= (0<<PINB4);
+	PORTB |= (0<<PINB5);
+	
+}
+void UART_init (void)
+{
+	// Set all needed register
+	//PRR0 &= ~(1<<PRUSART0);
+	UBRR0H = (UDDRV>>8);
+	UBRR0L = UDDRV;
+	#if USE_2X
+	UCSR0A |= (1<<U2X0);
+	#else
+	UCSR0A &= ~(1<<U2X0);
+	#endif
+	UCSR0B |= ((1 << TXEN0)|(1 << RXEN0)|(1<<RXCIE0)); // set transmitter enable and receiver enable to 1 to indicate UART is ready to RX and TX
+	UCSR0C |= (1 << UCSZ00)|(1 << UCSZ10); // select UCSR0C and set data bits to 8 did not find URSEL
+	
+	
+	
+}	
+void UART_transmitByte (unsigned char data)
+{
+	while(!(UCSR0A & (1 << UDRE0))){} // UDRE is 1 then there is data in buffet
+	UDR0 = data; // send data to data register
+	
+}
+unsigned char UART_recieveByte(void)
+{
+	while(!((UCSR0A) & (1 << RXC0))); // check if we receive something
+	
 	return UDR0;
+	
+	
 }
