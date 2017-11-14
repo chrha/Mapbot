@@ -1,67 +1,81 @@
-
 /*
+*
  * UART_transm.c
  *
  * Created: 11/10/2017 9:07:26 AM
  *  Author: nisan016
- */ 
+ */
+ 
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
 #include <avr/interrupt.h>
-
 #define BAUD 115200
 #define F_CPU 14745600 // set clock frekvens after pdf
 #define UDDRV ((F_CPU)/(16*BAUD)-1)
-//#include <util/setbaud.h>
+
 void UART_init (void);
 void UART_transmitByte (unsigned char data);
 unsigned char UART_recieveByte(void);
-unsigned char str[12] = "420 blaze it";
-unsigned int i=0;
+unsigned int c= 0;
+volatile unsigned char dtemp;
 volatile unsigned char data_received;
+
 int main(void)
 {
-	//DDRB = 0b00000001;
-	DDRB |= (1 << PINB2);
-	PORTB &= ~(1 << PINB2);
+	
+	DDRB = 0xFF;
+	
 	
 	UART_init();
-	sei();
     while(1)
     {
 		
         //TODO:: Please write your application code
+		cli();
+		dtemp = data_received;
+		sei();
+		if (dtemp == 'a'){
+		PORTB |= (1<<PINB2);
+		
+		}
+	
+		else if(dtemp == 'd'){
+		PORTB |= (1<<PINB3);
 		
 		
 		
+		}
+		else if(dtemp == 'w') {
+		PORTB |= (1<<PINB4);
 		
 		
-    }
+		
+		}
+		else if(dtemp == 's'){
+			PORTB |= (1<<PINB5);
+			
+		
+
+		}else{
+			PORTB &= (0<<PINB2);
+			PORTB &= (0<<PINB3);
+			PORTB &= (0<<PINB4);
+			PORTB &= (0<<PINB5);
+				
+		}
+		
+		
+    
+		}
 }
-ISR(USART0_RX_vect){
+ISR(USART0_RX_vect){ 
 	data_received= UDR0;
 	
-	if (data_received == 'a'){
-		PORTB |= (1<<PINB2);
-	}
 	
-	if(data_received == 'd'){
-		PORTB |= (1<<PINB3);
-	}
-	if(data_received == 'w') {
-		PORTB |= (1<<PINB4);
-	}
-	if(data_received == 's'){
-		PORTB |= (1<<PINB5);
-	}
+	
 	UART_transmitByte(data_received);
-	data_received='0';
-	
-	PORTB |= (0<<PINB2);
-	PORTB |= (0<<PINB3);
-	PORTB |= (0<<PINB4);
-	PORTB |= (0<<PINB5);
+
 	
 }
 void UART_init (void)
