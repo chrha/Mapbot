@@ -1,93 +1,76 @@
-
+/*
+ * PWM.c
+ *
+ * Created: 11/15/2017 11:54:50 AM
+ *  Author: andma590
+ */ 
 
 
 #include <avr/io.h>
-#include <util/delay.h>
 
-#define F_CPU 14745600
-void forward (void);
-void rotate_left(void);
-void rotate_right(void);
-void backward(void);
+void pwm_init();
+void pwm_drive();
+void rotate_left();
+void rotate_right();
+void dir_foreward();
+void dir_backward();
 void where_to_go(void);
 
-uint8_t temp0 =0;
-uint8_t temp1 =0;
-uint8_t temp2 =0;
-uint8_t temp3=0;
-
-	
 int main(void)
 {
-	
-	DDRD =(0xFF); // Setting all ports(D) to output
-	DDRA =(0x00); // Setting all port(C) to input
-	PORTD =0x00;
-	while(1){
-		where_to_go();
-	
-	}
-	
+	DDRA =0x00;
+	DDRD=0xff;
+    while(1)
+    {
+        pwm_init();
+		rotate_right();
+		
+    }
 }
 
-
-
-void forward(void)
+void pwm_init()
 {
+	TCCR3A = 0b10100001; //COM3A1 = 1, COM3B1 = 1, WGM30 = 1;
+	TCCR3B = 0b00000011; // CS31 = , CS30 = 1
+	TCNT0 = 0;
+	DDRB = 0xff; 	
+}
 
-	PORTD &= ~(1 << PORTD1); // Pin PD0 goes low (forward_right) 
-	PORTD &= ~(1 << PORTD0); // Pin PD1 goes low (forward_left)
+void pwm_drive()
+{
 	
-	PORTD |= (1 << PORTD4);
-	PORTD |= (1 << PORTD6);
-	_delay_ms(50);
-	PORTD &= ~(1 << PORTD4); 
-	PORTD &= ~(1 << PORTD6);
-	_delay_ms(50);
+	OCR3B = 150; // left
+	OCR3A = 150; // right
 	
 }
 
-void rotate_left(void)
+void dir_foreward()
+{
+	PORTD &= ~(1 << PORTD1); // Pin PD0 goes low (forward_right)
+	PORTD &= ~(1 << PORTD0); // Pin PD1 goes low (forward_left)
+	pwm_drive();	
+}
+
+void dir_backward()
+{
+	PORTD |= (1 << PORTD1); // Pin PD0 goes low (forward_right)
+	PORTD |= (1 << PORTD0); // Pin PD1 goes low (forward_left)
+	pwm_drive();
+}
+
+
+void rotate_left()
 {
 	PORTD &= ~(1 << PORTD1); // Pin PD0 goes low (forward_right)
 	PORTD |= (1 << PORTD0); // Pin PD1 goes low (forward_left)
-	
-	PORTD |= (1 << PORTD4);
-	PORTD |= (1 << PORTD6);
-	_delay_ms(50);
-	PORTD &= ~(1 << PORTD4);
-	PORTD &= ~(1 << PORTD6);
-	_delay_ms(50);
-			
+	pwm_drive();
 }
 
-void rotate_right(void)
+void rotate_right()
 {
 	PORTD &= ~(1 << PORTD0); // Pin PD0 goes low (forward_right)
 	PORTD |= (1 << PORTD1); // Pin PD1 goes low (forward_left)
-	
-	PORTD |= (1 << PORTD4);
-	PORTD |= (1 << PORTD6);
-	_delay_ms(50);
-	PORTD &= ~(1 << PORTD4);
-	PORTD &= ~(1 << PORTD6);
-	_delay_ms(50);
-	
-}
-
-void backward(void)
-{
-
-	PORTD |= (1 << PORTD1); // Pin PD0 goes low (forward_right)
-	PORTD |= (1 << PORTD0); // Pin PD1 goes low (forward_left)
-	
-	PORTD |= (1 << PORTD4);
-	PORTD |= (1 << PORTD6);
-	_delay_ms(50);
-	PORTD &= ~(1 << PORTD4);
-	PORTD &= ~(1 << PORTD6);
-	_delay_ms(50);
-	
+	pwm_drive();
 }
 
 void where_to_go(void)
@@ -100,22 +83,19 @@ void where_to_go(void)
 	
 	if(temp0 == 0x01){
 		
-			rotate_left();
+		rotate_left();
 		
 	}
 	else if(temp1 == 0x02){
-
-			rotate_right();
-	
-
+		rotate_right();
+		
 	}
 	else if(temp2 == 0x04){
-			forward();
-	
+		dir_foreward();
+		
 	}
 	else if(temp3 == 0x08){
-			backward();
+		dir_backward();
 		
 		
 	}
-}
