@@ -64,19 +64,21 @@ void PID(){
 	P= error;
 	I += error;
 	D = (error - latest_error);
-	
+	if(I >= 100){  // limit wind up
+		I=100;
+	}
 	PID_value= KP*P + KD* D + KI*I;
 	
 	UART_transmitByte(PID_value);      
 	
-	if( error < 0){              // rotate left
-		PORTB |= (1 << PINB2);
+	if( PID_value < 0){              // rotate right
+		PORTB |= (1 << PINB3);
 		PORTB &= (0<<PINB3);
 		PORTB &= (0<<PINB4);
 		PORTB &= (0<<PINB5);
 	}
-	else if(error > desired_value){ // rotate right
-		PORTB |= (1 << PINB3);
+	else if(PID_value > 0){ // rotate left
+		PORTB |= (1 << PINB2);
 		PORTB &= (0<<PINB2);
 		PORTB &= (0<<PINB4);
 		PORTB &= (0<<PINB5);
@@ -88,7 +90,6 @@ void PID(){
 		PORTB &= (0<<PINB2);
 		PORTB &= (0<<PINB5);
 	}
-	
 	latest_error=error;
 	
 	
