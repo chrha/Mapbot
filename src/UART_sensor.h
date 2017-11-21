@@ -1,4 +1,3 @@
-
 #define F_CPU 14745600 // set clock frekvens after pdf
 #define BAUD 115200
 #define UDDRV ((F_CPU)/(16*BAUD)-1)
@@ -17,7 +16,7 @@ void UART_init (void)
 	UCSR1A &= ~(1<<U2X1);
 	#endif
 	UCSR1B |= ((1 << TXEN1)|(1 << RXEN1)|(1<<RXCIE1)); // set transmitter enable and receiver enable to 1 to indicate UART is ready to RX and TX
-	UCSR0C |= (1 << UCSZ10)|(1 << UCSZ11); // select UCSR0C and set data bits to 8 did not find URSEL
+	UCSR1C |= (1 << UCSZ10)|(1 << UCSZ11); // select UCSR0C and set data bits to 8 did not find URSEL
 	
 	
 	
