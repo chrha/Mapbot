@@ -1,86 +1,109 @@
 #include <avr/io.h>
-void error_I2C(void)
-void error_I2C(void){
+#include "UART_sensor.h"
+#define TWBRV ((F_CPU / 100000) - 16) / 2
 
+void error_I2C(void);
+void passed_I2C(void);
+void I2C_StartOrRestart(void);
+void I2C_CheckStatusReg(uint8_t Status);
+void I2C_WaitForFlagToBeSet(void);
+void I2C_ClearFlagAndEnable_WithACK(void);
+void I2C_ClearFlagAndEnable(void);
+void I2C_init(void);
+uint8_t I2C_receive(uint8_t regAdr);
+
+
+void error_I2C(void){
+	UART_transmitByte('e');	
 }
 void passed_I2C(void){
+	UART_transmitByte('p');
+	
 
 }
-void I2CWaitForFlagToBeSet(){
-while ( !(TWCR & (1<<TWINT))); 
+void I2C_WaitForFlagToBeSet(void){
+	while ( !(TWCR & (1<<TWINT))){
+		
+	}
+	
 }
-void I2CCheckStatusReg(uint 8_t Status){
-	if ((TWSR & Status) != Status){ //check that its actualy a start cond
+void I2C_CheckStatusReg(uint8_t Status){
+	if ((TWSR & 0xF8) != Status){ //check that its actualy a start cond
 		error_I2C();}
 	else {
 		passed_I2C();
 		
 	}
 }
-void I2CClearFlagAndEnable(){
-TWCR = (1 << TWINT) | (1<<TWEN);
+void I2C_ClearFlagAndEnable(void){
+	TWCR = (1 << TWINT) | (1<<TWEN);
 }
-void I2C_StartOrRestart(){
+void I2C_StartOrRestart(void){
 	TWCR = (1<<TWEN) | (1<<TWINT) | (1 << TWSTA);
 }
-void I2CClearFlagAndEnable_WithACK(){
-TWCR = (1 << TWINT) | (1<<TWEN) | (1<<TWEA);
+void I2C_ClearFlagAndEnable_WithACK(void){
+	TWCR = (1 << TWINT) | (1<<TWEN) | (1<<TWEA);
 }
-void init_I2C(){
-	PRR0 &= (0<<PRTWI); // turn off power reduction so I2C is nod disabled
-	TWCR &= (0<<TWIE); //turn off interrupt
-	TWBR = "beräkna" //set bitrate
-	TWSR & = (0<<TWPS1)| (1<<TWPSO); //No prescaler to mess up the status reg
+void I2C_init(void){
+	PRR0 &= ~(1<<PRTWI); // turn off power reduction so I2C is nod disabled
+	TWCR &= ~(1<<TWIE); //turn off interrupt
+	TWBR = TWBRV; //set bitrate
+	TWSR &= ~(1<<TWPS1)| (0<<TWPS0); //No prescaler to mess up the status reg
 }
-int main(void){
-	
-	
-	// Init I2C
-	init_I2C();
-	
+uint8_t I2C_receive(uint8_t regAdr){
 	//start cond
-	TWCR = (1<<TWEN) | (1<<TWINT) | (1 << TWSTA);
-	I2CWaitForFlagToBeSet(); //wait for flag to be set
-	I2CCheckStatusReg(0x08);
+	TWCR =0;
+	I2C_StartOrRestart();
+	I2C_WaitForFlagToBeSet(); //wait for flag to be set
+	I2C_CheckStatusReg(0x08);
+	
 	
 	//send slave addr and w/r
-	TWDR = slave_addr // +1 om R +0 om W
-	I2CClearFlagAndEnable(); // CLEAR THE FLAG AND ENABLE
-	I2CWaitForFlagToBeSet();
-	I2CCheckStatusReg(0x18); // Check status for SLA + W transminted and ACK Rcv'd
+	TWDR = 0xD6; // +1 om R +0 om W
+	I2C_ClearFlagAndEnable(); // CLEAR THE FLAG AND ENABLE
+	I2C_WaitForFlagToBeSet();
+	I2C_CheckStatusReg(0x18); // Check status for SLA + W transminted and ACK Rcv'd
 	
+	// send register address
+	TWDR = regAdr;
+	I2C_ClearFlagAndEnable(); // CLEAR THE FLAG AND ENABLE
+	I2C_WaitForFlagToBeSet();
+	I2C_CheckStatusReg(0x28); // Check status for SLA + W transminted and ACK Rcv'd
 	
-	
-	//write
-	
-	I2CClearFlagAndEnable();
-	I2CWaitForFlagToBeSet();
-	I2CCheckStatusReg(0x28);
-	
-	
-	//repeat start 
+	//restart
 	I2C_StartOrRestart();
-	I2CWaitForFlagToBeSet();
-	I2CCheckStatusReg(0x10);	
+	I2C_WaitForFlagToBeSet(); //wait for flag to be set
+	I2C_CheckStatusReg(0x10);
 	
-	//Send Slave addr and R
-	TWDR = slave_addr + 1; // +1 om R +0 om W
-	I2CClearFlagAndEnable(); // CLEAR THE FLAG AND ENABLE
-	I2CWaitForFlagToBeSet();
-	I2CCheckStatusReg(0x40); // Check status for SLA + R transminted and ACK Rcv'd
+	//send slave addr and w/r
+	TWDR = 0xD7; // +1 om R +0 om W
+	I2C_ClearFlagAndEnable(); // CLEAR THE FLAG AND ENABLE
+	I2C_WaitForFlagToBeSet();
+	I2C_CheckStatusReg(0x40); // Check status for SLA + W transminted and ACK Rcv'd
 	
-	 //Read data
-	 uint8_t IDFromADXL = 0;
-	 IDFromADXL = TWDR;
-	 I2CClearFlagAndEnable();
-	I2CWaitForFlagToBeSet();
-	I2CCheckStatusReg(0x58); // Check for dtata rcvd and nack sent
-
+	
+	
+	I2C_ClearFlagAndEnable(); // CLEAR THE FLAG AND ENABLE
+	I2C_WaitForFlagToBeSet();
+	I2C_CheckStatusReg(0x58); // Check status for SLA + W transminted and ACK Rcv'd
+	
+	PORTD = 0;
+	PORTD = 0x80;
+	PORTD = 0;
+	
+	//Read data
+	uint8_t gyroData = 0;
+	gyroData = TWDR;
+	//I2C_ClearFlagAndEnable();
+	//I2C_WaitForFlagToBeSet();
+	//I2C_CheckStatusReg(0x58); // Check for dtata rcvd and nack sent
+	
+	
+	
+	
 	// Stop Cond
 	TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWSTO);
+	return gyroData;
 	
-	
-	while(1){
-	
-	}
 }
+
