@@ -23,7 +23,8 @@ const unsigned char const_speed = 150;
 int main(void)
 {
 	DDRA =0x00;
-	DDRD=0xff;
+	DDRD=0xf3;
+	PORTD &= 0b00000000;
 	pwm_init();
 	UART_init();
 	sei();
@@ -121,4 +122,4 @@ void where_to_go(void)
 		OCR3B = 0; 
 		OCR3A = 0;
 	}
-}
+} 
