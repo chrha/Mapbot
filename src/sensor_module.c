@@ -39,6 +39,7 @@ uint8_t right_distance=0;
 int main(void)
 {
 	DDRB = 0x0F;
+	PORTB &= 0b00000000;
 	adc_init();
 	UART_init();
 	I2C_init();
@@ -51,11 +52,11 @@ int main(void)
 		//actual_value= (signed char)((uint8_t)(s1-s2));
 		
 		// notera att PINB4 inte funkar.enbart jordning.
-		//sensor_right_front();
-		//sensor_right_back();
-		
+		sensor_right_front();
+		sensor_right_back();
+		sensor_gyro();
 		sensor_distance();
-		//terminal_view(left_distance,average_distance);
+		//terminal_view(1,0);
 	
 		
 		
@@ -89,13 +90,13 @@ void SendString(char mydata[20])
 
 void terminal_view (uint8_t adc_channel1, uint8_t adc_channel2)
 {
-	//adc_channel1&=0b00000111;
-	//adc_channel2&=0b00000111;
+	adc_channel1&=0b00000111;
+	adc_channel2&=0b00000111;
 	char mychar1[5];
 	char mychar2[5];
 
 	SendString("ADC_value1: ");
-	sprintf(mychar1, "%04d", adc_channel1);
+	sprintf(mychar1, "%04d", adc_read(adc_channel1));
 	UART_transmitByte(mychar1[1]);
 	UART_transmitByte(mychar1[2]);
 	UART_transmitByte(mychar1[3]);
@@ -103,7 +104,7 @@ void terminal_view (uint8_t adc_channel1, uint8_t adc_channel2)
 	_delay_ms(50);
 	
 	SendString("   ADC_value2: ");
-	sprintf(mychar2, "%04d", adc_channel2);
+	sprintf(mychar2, "%04d", adc_read(adc_channel2));
 	UART_transmitByte(mychar2[1]);
 	UART_transmitByte(mychar2[2]);
 	UART_transmitByte(mychar2[3]);
@@ -165,10 +166,17 @@ void sensor_distance(void){
 	right_distance= lenght_right();
 	average_distance = (left_distance + right_distance) / 2;
 	
+	
 	if ( average_distance >= 30)
 	{
 		PORTB |= 0b00000111;
 		PORTB &= 0b00000111;
+		UART_transmitByte(average_distance);
+		black_4=0;
+		black_5=0;
+		white_4=0;
+		white_5=0;
+		
 	}
 	else
 	{
@@ -219,4 +227,3 @@ uint8_t lenght_right()
 	
 	return black_5 + white_5;
 }
-
