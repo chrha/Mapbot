@@ -54,10 +54,14 @@ void rotate_left(void);
 void pid_forward(void);
 void backward(void);
 void forward(void);
+void stop_servos(void);
+void rotate_90_left(void);
+void rotate_90_right(void);
 
 
-
-
+float angle = 0;
+float tempG;
+float gyroData = 0;
 
 void terminal_view (uint8_t adc_channel1,uint8_t adc_channel2, uint8_t actual);
 
@@ -129,7 +133,7 @@ ISR(USART1_RX_vect){
 		sensor_gyro_high= data_received_sensor;
 	}
 
-	
+	gyroData = (int16_t)(sensor_gyo_low | (int16_t)(sensor_gyro_high <<8));
 	
 
 
@@ -180,9 +184,7 @@ void rotate_right(){
 	
 	PORTB |= (1 << PINB2);
 	PORTB &= 0b00000100;
-	_delay_ms(7750);
-	PORTB &= 0b00000000;
-	_delay_ms(10);
+	
 	
 }
 
@@ -190,10 +192,10 @@ void rotate_left(){
 	
 	PORTB |= (1 << PINB3);
 	PORTB &= 0b00001000;
-	_delay_ms(7750);
 	
-	PORTB &= 0b00000000;
-	_delay_ms(10);
+}
+void stop_servos(){
+    PORTB &= 0b00000000;
 }
 
 void pid_forward(){
@@ -217,4 +219,32 @@ void forward(){
 	PORTB |= 0b00010100;
 	PORTB &= 0b00010100;
 	_delay_ms(10);
-}  
+}
+void rotate_90_right(void){
+    rotate_right();
+		while (angle < 830){
+			cli();
+			tempG = out_x;
+			sei();
+			angle += abs(tempG)*0.01;
+			_delay_ms(100);
+		}
+		angle = 0;
+		stop_servos();
+    
+    }
+}
+void rotate_90_left(void){
+    rotate_left();
+		while (angle < 830){
+			cli();
+			tempG = out_x;
+			sei();
+			angle += abs(tempG)*0.01;
+			_delay_ms(100);
+		}
+		angle = 0;
+		stop_servos();
+    
+    }
+}
