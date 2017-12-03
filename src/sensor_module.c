@@ -35,7 +35,7 @@ uint8_t latest_color2=0;
 uint8_t average_distance=0;
 uint8_t left_distance=0;
 uint8_t right_distance=0;
-
+uint8_t average_front_distance=0;
 int main(void)
 {
 	DDRB = 0x0F;
@@ -54,8 +54,10 @@ int main(void)
 		// notera att PINB4 inte funkar.enbart jordning.
 		sensor_right_front();
 		sensor_right_back();
+		sensor_front();
+		sensor_left();
 		sensor_gyro();
-		sensor_distance();
+		//sensor_distance();
 		//terminal_view(1,0);
 	
 		
@@ -121,22 +123,22 @@ void sensor_right_front(){
 	PORTB |= (1 << PINB0);
 	PORTB &= 0b00000001;
 	UART_transmitByte(adc_read(1));
-	_delay_ms(10);
+	_delay_ms(5);
 }
 
 void sensor_right_back(){
 	PORTB |= (1 << PINB1);
 	PORTB &= 0b00000010;
 	UART_transmitByte(adc_read(0));
-	_delay_ms(10);
+	_delay_ms(5);
 }
 
 void sensor_front(){
-	
+	average_front_distance= ( adc_read(3)+adc_read(4) ) / 2;
 	PORTB |= 0b00000011;
 	PORTB &= 0b00000011;
-	UART_transmitByte(ceil( ( adc_read(2)+adc_read(3) ) / 2));
-	_delay_ms(10);
+	UART_transmitByte(average_front_distance);
+	_delay_ms(5);
 }
 
 
@@ -144,8 +146,8 @@ void sensor_left(){
 	
 	PORTB |= (1 << PINB2);
 	PORTB &= 0b00000100;	
-	UART_transmitByte(adc_read(4));
-	_delay_ms(10);
+	UART_transmitByte(adc_read(2));
+	_delay_ms(5);
 }
 
 void sensor_gyro(){
@@ -153,12 +155,12 @@ void sensor_gyro(){
 	PORTB |= 0b00000101;
 	PORTB &= 0b00000101;
 	UART_transmitByte(I2C_receive(0x2C)); // low
-	_delay_ms(10);
+	_delay_ms(5);
 	
 	PORTB |= 0b00000110;
 	PORTB &= 0b00000110;
 	UART_transmitByte(I2C_receive(0x2D)); // high
-	_delay_ms(10);
+	_delay_ms(5);
 }
 
 void sensor_distance(void){
@@ -182,7 +184,7 @@ void sensor_distance(void){
 	{
 		PORTB = 0b00000000;
 	}
-	_delay_ms(10);
+	_delay_ms(5);
 }  
  
 uint8_t lenght_left()
