@@ -2,8 +2,8 @@
 #define BAUD 115200
 #define UDDRV ((F_CPU)/(16*BAUD)-1)
 void UART_init (void);
-void UART_transmitByte (unsigned char data);
-unsigned char UART_recieveByte(void);
+void UART_transmitByte (char data);
+char UART_recieveByte(void);
 void UART_init (void)
 {
 	// Set all needed register
@@ -21,13 +21,13 @@ void UART_init (void)
 	
 	
 }	
-void UART_transmitByte ( unsigned char data)
+void UART_transmitByte (char data)
 {
 	while(!(UCSR1A & (1 << UDRE1))){} // UDRE is 1 then there is data in buffet
 	UDR1 = data; // send data to data register
 	
 }
- unsigned char UART_recieveByte(void)
+char UART_recieveByte(void)
 {
 	while(!((UCSR1A) & (1 << RXC1))); // check if we receive something
 	
