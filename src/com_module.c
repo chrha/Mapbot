@@ -1,3 +1,4 @@
+
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
@@ -23,11 +24,11 @@ volatile int i=0;
 signed char latest_error=0;
 signed char I=0;
 signed char P;
-signed char desired_value=0;
-signed char actual_value;
+volatile signed char desired_value=0;
+volatile signed char actual_value;
 signed char D;
 signed char PID_value;
-signed char error=0;
+volatile signed char error=0;
 signed char strong1=30;
 signed char strong2=-20;
 signed char weak1=10;
@@ -66,6 +67,8 @@ int main(void)
 			
 		pid_forward();
 		
+	
+		
 		if (error >= 75)
 		{
 			forward();
@@ -77,28 +80,52 @@ int main(void)
 			stop_servos();
 			_delay_ms(10000);
 			forward();
-			_delay_ms(5000);
+			_delay_ms(10000);
+			
+		}else if ((error <=75) && (sensor_front >= 145) && (sensor_left >=120)){
 			stop_servos();
 			_delay_ms(10000);
-		}
-		
-		
-		/*if(error >= 75){
-			
-			forward();
-			if(error > 74 ) {
-				rotate_90_right();
-				_delay_ms(10000);
-				stop_servos();
-				_delay_ms(10000)
-				while(1){}
-			}
-			
+			rotate_90_left();
+			stop_servos();
 			_delay_ms(10000);
-			forward();
-			while(error > 50 ) {}
-			_delay_ms(100);
-		}		*/
+			rotate_90_left();
+			stop_servos();
+			_delay_ms(10000);
+			while(sensor_left >= 181){
+				if (error >= 75)
+				{
+					forward();
+					_delay_ms(5000);
+					stop_servos();
+					_delay_ms(10000);
+					rotate_90_right();
+					_delay_ms(10000);
+					stop_servos();
+					_delay_ms(10000);
+					forward();
+					_delay_ms(10000);
+					stop_servos();
+					while(1){}
+				
+				}else{
+					pid_forward();
+				}
+			
+			}
+		
+		
+		} else if ((error <=75) && (sensor_front >= 145)){
+			stop_servos();
+			_delay_ms(10000);
+			rotate_90_left();
+			stop_servos();
+			_delay_ms(10000);
+		} 
+	
+		/*if(sensor_left >= 43){
+			stop_servos();   // stanna om ö hittad
+			while(1){}
+		}*/
 
 	}
 	
@@ -139,7 +166,8 @@ ISR(USART1_RX_vect){
 	gyroData = (int16_t)(sensor_gyro_low | (int16_t)(sensor_gyro_high <<8));
 	gyroData *= 0.07; 
 
-	
+	actual_value= sensor_right_front- sensor_right_back;
+	error= desired_value - actual_value;
 	
 	
 }
@@ -147,8 +175,7 @@ void PID(){
 	
 	
 	
-	actual_value= sensor_right_front- sensor_right_back;
-	error= desired_value - actual_value;
+	
 	
 	P= error;
 	I += error;
