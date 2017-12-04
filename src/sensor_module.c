@@ -32,13 +32,15 @@ uint8_t PB_4=0;
 uint8_t PB_5=0;
 uint8_t latest_color1=0;
 uint8_t latest_color2=0;
-uint8_t average_distance=0;
-uint8_t left_distance=0;
-uint8_t right_distance=0;
+float average_distance=0;
+float left_distance=0;
+float right_distance=0;
 uint8_t average_front_distance=0;
+uint8_t temp=0;
 int main(void)
 {
-	DDRB = 0x0F;
+	DDRB = 0b01001111;
+	DDRD = 0x00;
 	PORTB &= 0b00000000;
 	adc_init();
 	UART_init();
@@ -52,12 +54,20 @@ int main(void)
 		//actual_value= (signed char)((uint8_t)(s1-s2));
 		
 		// notera att PINB4 inte funkar.enbart jordning.
+		temp = PIND & 0b10000000;
+		if(temp == 0b00000000)
+		{
+			sensor_distance();
+		}
+		
 		sensor_right_front();
 		sensor_right_back();
 		sensor_front();
 		sensor_left();
 		sensor_gyro();
-		//sensor_distance();
+		
+		
+
 		//terminal_view(1,0);
 	
 		
@@ -135,8 +145,8 @@ void sensor_right_back(){
 
 void sensor_front(){
 	average_front_distance= ( adc_read(3)+adc_read(4) ) / 2;
-	PORTB |= 0b00000011;
-	PORTB &= 0b00000011;
+	PORTB |= (1 << PINB0);
+	PORTB &= 0b00000001;
 	UART_transmitByte(average_front_distance);
 	_delay_ms(5);
 }
@@ -164,24 +174,22 @@ void sensor_gyro(){
 }
 
 void sensor_distance(void){
-	left_distance=lenght_left();
-	right_distance= lenght_right();
+	left_distance=(float)lenght_left();
+	right_distance= (float)lenght_right();
 	average_distance = (left_distance + right_distance) / 2;
 	
 	
-	if ( average_distance >= 30)
-	{
+	if ( average_distance >= 14.5){
+		
 		PORTB |= 0b00000111;
 		PORTB &= 0b00000111;
-		UART_transmitByte(average_distance);
+		UART_transmitByte('1');
 		black_4=0;
 		black_5=0;
 		white_4=0;
 		white_5=0;
-		
 	}
-	else
-	{
+	else{
 		PORTB = 0b00000000;
 	}
 	_delay_ms(5);
