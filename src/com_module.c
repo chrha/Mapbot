@@ -1,3 +1,4 @@
+
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
@@ -48,7 +49,7 @@ void rotate_90_right(void);
 double angle = 0;
 double tempG;
 double gyroData = 0;
-
+char k=0;
 void PID(void);
 int main(void)
 {
@@ -68,14 +69,13 @@ int main(void)
 		
 		
 
-		/*
+		
 			
 		pid_forward();
 		
 	
 		
-		if (error >= 75)
-		{
+		if (error >= 75){
 			forward();
 			_delay_ms(3000);
 			stop_servos();
@@ -97,8 +97,7 @@ int main(void)
 			stop_servos();
 			_delay_ms(10000);
 			while(sensor_left >= 181){
-				if (error >= 75)
-				{
+				if (error >= 75){
 					forward();
 					_delay_ms(5000);
 					stop_servos();
@@ -127,19 +126,19 @@ int main(void)
 			_delay_ms(10000);
 		} 
 	
-		/*if(sensor_left >= 43){
+	/*	if(sensor_left >= 43){
 			stop_servos();   // stanna om ö hittad
 			while(1){}
 		}
 		
+		*/
+		
+		
+		
+		
+		
 	
-		
-		
-		
-		
-		forward();
 	
-	*/
 	
 			
 	
@@ -151,31 +150,14 @@ int main(void)
 ISR(USART0_RX_vect){
 	
 	data_received_usb= UART_usb_recieveByte();
-	
-	if (data_received_usb == 'w'){
-		forward();	
+
 		
-	}else if(data_received_usb == 'a'){
-		rotate_90_left(); // ändra till sväng sen
-		
-	}else if(data_received_usb == 'd'){
-		rotate_90_right();
-	
-	}else if(data_received_usb == 's'){
-		backward();
-	
-	}else{
-		stop_servos();
-	}
-		
-	  
-	
 }
 
 ISR(USART1_RX_vect){
 	
 	data_received_sensor = UDR1;
-	
+
 	
 	temp0 = PINA & 0b00000111;
 	
@@ -196,18 +178,30 @@ ISR(USART1_RX_vect){
 	}else if(temp0 == 7){
 		sensor_distance=data_received_sensor;
 		count_walls +=1;
-/*		stop_servos();
-		_delay_ms(10000);*/
+		/*if (count_walls==4){
+			stop_servos();
+			while(1){}
+		}*/
 			
 	}
 	
 	
 	gyroData = (int16_t)(sensor_gyro_low | (int16_t)(sensor_gyro_high <<8));
 	gyroData *= 0.07;
-		
-		
+	
+
+
 	actual_value= sensor_right_front- sensor_right_back;
 	error= desired_value - actual_value;
+	
+	char mychar1[4];
+	sprintf(mychar1, "%04d", count_walls);
+	UART_usb_transmitByte(mychar1[1]);
+	UART_usb_transmitByte(mychar1[2]);
+	UART_usb_transmitByte(mychar1[3]);	
+	UART_usb_transmitByte(13); 
+		
+	
 	
 	
 }
@@ -293,9 +287,10 @@ void forward(){
 
 void rotate_90_right(void){
 	rotate_right();
+	PORTD |= 0b10000000;
+	PORTD &= 0b10000000;
 	while (angle < 830){
-		PORTD |= 0b10000000;
-		PORTD &= 0b10000000;
+		
 		
 		cli();
 		tempG = gyroData;
@@ -303,27 +298,28 @@ void rotate_90_right(void){
 		angle += fabs(tempG)*0.01;
 		_delay_ms(100);
 	}
-	PORTD &= 0b00000000;
-	
 	angle = 0;
 	stop_servos();
+	PORTD &= 0b00000000;
 	
 }
 
 void rotate_90_left(void){
 	rotate_left();
+	PORTD |= 0b10000000;
+	PORTD &= 0b10000000;
 	while (angle < 830){
-		PORTD |= 0b10000000;
-		PORTD &= 0b10000000;
+		
 		cli();
 		tempG = gyroData;
 		sei();
 		angle += fabs(tempG)*0.01;
 		_delay_ms(100);
 	}
-	PORTD &= 0b00000000;
+	
 	angle = 0;
 	stop_servos();
+	PORTD &= 0b00000000;
 	
 }
 
