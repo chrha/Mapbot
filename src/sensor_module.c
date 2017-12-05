@@ -54,23 +54,41 @@ int main(void)
 		//actual_value= (signed char)((uint8_t)(s1-s2));
 		
 		// notera att PINB4 inte funkar.enbart jordning.
+		
 		temp = PIND & 0b10000000;
-		if(temp == 0b00000000)
+		if(temp == 0b10000000)
 		{
-			sensor_distance();
+			black_4=0;
+			black_5=0;
+			white_4=0;
+			white_5=0;
 		}
+		
+		sensor_distance();
 		
 		sensor_right_front();
 		sensor_right_back();
+		
+		lenght_left();
+		lenght_right();
+		
 		sensor_front();
 		sensor_left();
+		
+		lenght_left();
+		lenght_right();
+		
 		sensor_gyro();
+		
 		
 		
 
 		//terminal_view(1,0);
 	
 		
+		
+		
+			
 		
 	}
 }
@@ -145,8 +163,8 @@ void sensor_right_back(){
 
 void sensor_front(){
 	average_front_distance= ( adc_read(3)+adc_read(4) ) / 2;
-	PORTB |= (1 << PINB0);
-	PORTB &= 0b00000001;
+	PORTB |= 0b00000011;
+	PORTB &= 0b00000011;
 	UART_transmitByte(average_front_distance);
 	_delay_ms(5);
 }
@@ -179,7 +197,7 @@ void sensor_distance(void){
 	average_distance = (left_distance + right_distance) / 2;
 	
 	
-	if ( average_distance >= 14.5){
+	if ( average_distance >= 24){	// ha 24. 28 på prick. 30 stor.
 		
 		PORTB |= 0b00000111;
 		PORTB &= 0b00000111;
