@@ -1,4 +1,3 @@
-
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
@@ -37,7 +36,7 @@ signed char weak1=10;
 signed char weak2=-5; // -10
 volatile uint8_t temp0;
 volatile uint8_t temp1;
-volatile uint8_t count_walls=0;
+volatile uint8_t count_walls=1;
 void rotate_right(void);
 void rotate_left(void);
 void pid_forward(void);
@@ -64,20 +63,14 @@ int main(void)
 	sei();	
 	while(1)
 	{
-		
-		
-		
-		
-
-		
 			
 		pid_forward();
-		
+
 	
 		
-		if (error >= 75){
+		if (error >= 55){
 			forward();
-			_delay_ms(3000);
+			_delay_ms(4000);
 			stop_servos();
 			_delay_ms(10000);
 			rotate_90_right();
@@ -87,7 +80,7 @@ int main(void)
 			forward();
 			_delay_ms(10000);
 			
-		}else if ((error <=75) && (sensor_front >= 133) && (sensor_left >=120)){
+		}else if ((error <=55) && (sensor_front >= 110) && (sensor_left >=120)){
 			stop_servos();
 			_delay_ms(10000);
 			rotate_90_left();
@@ -96,20 +89,20 @@ int main(void)
 			rotate_90_left();
 			stop_servos();
 			_delay_ms(10000);
+		
 			while(sensor_left >= 181){
-				if (error >= 75){
+				if (error >= 55){
 					forward();
-					_delay_ms(5000);
+					_delay_ms(4000);
 					stop_servos();
-					_delay_ms(10000);
+					_delay_ms(5000);
 					rotate_90_right();
 					_delay_ms(10000);
 					stop_servos();
-					_delay_ms(10000);
+					_delay_ms(5000);
 					forward();
 					_delay_ms(10000);
 					stop_servos();
-					while(1){}
 				
 				}else{
 					pid_forward();
@@ -118,7 +111,7 @@ int main(void)
 			}
 		
 		
-		} else if ((error <=75) && (sensor_front >= 133)){
+		} else if ((error <=55) && (sensor_front >= 110)){
 			stop_servos();
 			_delay_ms(10000);
 			rotate_90_left();
@@ -126,15 +119,13 @@ int main(void)
 			_delay_ms(10000);
 		} 
 	
-	/*	if(sensor_left >= 43){
-			stop_servos();   // stanna om ö hittad
-			while(1){}
-		}
+
+			  // 43(ca 80 cm) stanna om ö hittad
+	
 		
-		*/
+	
 		
-		
-		
+	
 		
 		
 	
@@ -178,10 +169,7 @@ ISR(USART1_RX_vect){
 	}else if(temp0 == 7){
 		sensor_distance=data_received_sensor;
 		count_walls +=1;
-		/*if (count_walls==4){
-			stop_servos();
-			while(1){}
-		}*/
+	
 			
 	}
 	
@@ -191,8 +179,6 @@ ISR(USART1_RX_vect){
 	
 
 
-	actual_value= sensor_right_front- sensor_right_back;
-	error= desired_value - actual_value;
 	
 	char mychar1[4];
 	sprintf(mychar1, "%04d", count_walls);
@@ -209,6 +195,8 @@ void PID(){
 	
 	
 	
+	actual_value= sensor_right_front- sensor_right_back;
+	error= desired_value - actual_value;
 	
 	
 	P= error;
@@ -221,19 +209,19 @@ void PID(){
 	
 	latest_error=error;
 	
-	if((sensor_right_front > 181) && (sensor_right_back < 181) ){
+	if((sensor_right_front > 159) && (sensor_right_back < 159) ){
 		
 		UART_transmitByte((weak2+PID_value)); // lugnt
 		
-		}else if( (sensor_right_front > 181) && ( sensor_right_back > 181)){
+		}else if( (sensor_right_front > 159) && ( sensor_right_back > 159)){
 		
 		UART_transmitByte((strong2+PID_value)); //stark
 		
-		}else if((sensor_right_front < 152) && (sensor_right_back > 152)){ // 152
+		}else if((sensor_right_front < 138) && (sensor_right_back > 138)){ // 152
 		
 		UART_transmitByte((weak1+PID_value));  //lugn
 		
-		}else if((sensor_right_front < 152) && (sensor_right_back < 152)){
+		}else if((sensor_right_front < 138) && (sensor_right_back < 138)){
 		
 		UART_transmitByte((strong1+ PID_value)); //stark
 		
@@ -267,6 +255,7 @@ void pid_forward(){
 	
 	PORTB |= 0b00001100;
 	PORTB &= 0b00001100;
+	_delay_ms(10);
 	PID();
 	_delay_ms(10);
 }
@@ -289,7 +278,7 @@ void rotate_90_right(void){
 	rotate_right();
 	PORTD |= 0b10000000;
 	PORTD &= 0b10000000;
-	while (angle < 830){
+	while (angle < 920){ //830
 		
 		
 		cli();
@@ -300,6 +289,7 @@ void rotate_90_right(void){
 	}
 	angle = 0;
 	stop_servos();
+	count_walls-=1;
 	PORTD &= 0b00000000;
 	
 }
@@ -308,7 +298,7 @@ void rotate_90_left(void){
 	rotate_left();
 	PORTD |= 0b10000000;
 	PORTD &= 0b10000000;
-	while (angle < 830){
+	while (angle < 920){ //830
 		
 		cli();
 		tempG = gyroData;
@@ -319,7 +309,7 @@ void rotate_90_left(void){
 	
 	angle = 0;
 	stop_servos();
+	count_walls +=1;
 	PORTD &= 0b00000000;
 	
-}
-
+} 
