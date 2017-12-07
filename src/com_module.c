@@ -45,6 +45,7 @@ void forward(void);
 void stop_servos(void);
 void rotate_90_left(void);
 void rotate_90_right(void);
+void sendData(void);
 double angle = 0;
 double tempG;
 double gyroData = 0;
@@ -313,3 +314,25 @@ void rotate_90_left(void){
 	PORTD &= 0b00000000;
 	
 } 
+void sendData(void){
+	UART_usb_transmitByte('r');
+	_delay_ms(500);
+	UART_usb_transmitByte(sensor_right_front);
+	_delay_ms(500);
+	UART_usb_transmitByte('b');
+	_delay_ms(500);
+	UART_usb_transmitByte(sensor_right_back);
+	_delay_ms(500);
+	UART_usb_transmitByte('f');
+	_delay_ms(500);
+	UART_usb_transmitByte(sensor_front);
+	_delay_ms(500);
+	UART_usb_transmitByte('l');
+	_delay_ms(500);
+	UART_usb_transmitByte(sensor_left);
+	_delay_ms(500);
+	UART_usb_transmitByte('d');
+	_delay_ms(500);
+	UART_usb_transmitByte(sensor_distance); 
+	_delay_ms(500);
+}
