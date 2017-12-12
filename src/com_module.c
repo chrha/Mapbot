@@ -1,3 +1,4 @@
+
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
@@ -13,7 +14,7 @@ volatile unsigned char data_received_usb;
 volatile unsigned char data_received_sensor;
 signed char KP=6;
 signed char KI=0;
-signed char KD=3;
+signed char KD=5;
 volatile unsigned char sensor_right_front=0;
 volatile unsigned char sensor_right_back=0;
 volatile unsigned char sensor_front=0;
@@ -64,6 +65,8 @@ void rotate_90_left(void);
 void rotate_90_right(void);
 void sendData(void);
 void send_coordinates(void);
+void automode(void);
+void hard_stop(void);
 double angle = 0;
 double tempG;
 double gyroData = 0;
@@ -87,100 +90,9 @@ int main(void)
 	sei();
 	while(1)
 	{
-		
-		pid_forward();
-		
-		
-		if (error >= 55){
-			if(s){
-				start_x=0;
-				start_y=0;
-				s=0;
-			}
-			cli();
-			//PORTD |= 0b10000000;
-			//PORTD &= 0b10000000;
-			forward();
-			_delay_ms(4000);
-			stop_servos();
-				if(direction == north){
-					direction= east;
-					UART_usb_transmitByte('e');
-					//y -= 1;
-					y+=1;
-					}else if(direction == east){
-					direction = south;
-					UART_usb_transmitByte('s');
-					//x -= 1;
-					x+=1;
-					}else if(direction == south){
-					direction = west;
-					UART_usb_transmitByte('w');
-					//y += 1;
-					y-=1;
-					}else if (direction == west){
-					direction = north;
-					UART_usb_transmitByte('n');
-					//x += 1;
-					x-=1;
-				}
-			sei();
-			//PORTD &= 0b00000000;
-			_delay_ms(10000);
-			rotate_90_right();
-			_delay_ms(10000);
-			stop_servos();
-			_delay_ms(10000);
-			forward();
-			_delay_ms(10000);
-			
-			}else if ((error <=55) && (sensor_front >= 110) && (sensor_left >=120)){
-			stop_servos();
-			_delay_ms(10000);
-			rotate_90_left();
-			stop_servos();
-			_delay_ms(10000);
-			rotate_90_left();
-			stop_servos();
-			_delay_ms(10000);
-			
-			while(sensor_left >= 181){
-				if (error >= 55){
-					forward();
-					_delay_ms(4000);
-					stop_servos();
-					_delay_ms(5000);
-					rotate_90_right();
-					_delay_ms(10000);
-					stop_servos();
-					_delay_ms(5000);
-					forward();
-					_delay_ms(10000);
-					stop_servos();
-					
-					}else{
-					pid_forward();
-				}
-				
-			}
-			
-			
-			} else if ((error <=55) && (sensor_front >= 110)){
-			stop_servos();
-			_delay_ms(10000);
-			rotate_90_left();
-			stop_servos();
-			_delay_ms(10000);
-		}else{
-			pid_forward();
-		}
-		
-		// 43(ca 80 cm) stanna om ö hittad
-		
-		
-		
-		
-		
+		automode();
+	
+
 	}
 	
 	
@@ -201,7 +113,7 @@ ISR(USART1_RX_vect){
 		
 	}
 	else if(temp0 == 2){
-		sensor_right_back=data_received_sensor;
+		sensor_right_back=data_received_sensor+5;
 	}else if (temp0 == 3){
 		sensor_front=data_received_sensor;
 	}else if (temp0 == 4){
@@ -212,6 +124,7 @@ ISR(USART1_RX_vect){
 		sensor_gyro_high= data_received_sensor;
 	}else if(temp0 == 7){
 		sensor_distance=data_received_sensor;
+		
 		//count_walls +=1;
 		if (direction == north){
 			y += 1;
@@ -223,12 +136,11 @@ ISR(USART1_RX_vect){
 			x -= 1;
 		}
 		//send_coordinates();
-
+	
 		UART_usb_transmitByte('k');
-
-		if((sensor_left >= 254) | (sensor_left <= 100)){
+		/*if((sensor_left >= 254) | (sensor_left <= 100)){
 			UART_usb_transmitByte('o');
-		}
+		}*/
 	}
 	
 	if((x == start_x) && (y == start_y)){
@@ -262,24 +174,24 @@ void PID(){
 	PID_value= KP*P + KD* D + KI*I;
 	
 	latest_error=error;
-	
-	if((sensor_right_front > 159) && (sensor_right_back < 159) ){
+	//126
+	if((sensor_right_front > 170) && (sensor_right_back < 170) ){
 		
-		UART_transmitByte((weak2+PID_value)); // lugnt
+		UART_transmitByte((weak1+PID_value)); // lugnt
 		
-		}else if( (sensor_right_front > 159) && ( sensor_right_back > 159)){
+	}else if( (sensor_right_front > 170) && ( sensor_right_back > 170)){
 		
-		UART_transmitByte((strong2+PID_value)); //stark
+		UART_transmitByte((strong1+PID_value)); //stark
 		
-		}else if((sensor_right_front < 138) && (sensor_right_back > 138)){ // 152
+	}/*if((sensor_right_front < 75) && (sensor_right_back > 75)){ 
 		
-		UART_transmitByte((weak1+PID_value));  //lugn
+		UART_transmitByte((weak2+PID_value));  //lugn
 		
-		}else if((sensor_right_front < 138) && (sensor_right_back < 138)){
+	}else if((sensor_right_front < 75) && (sensor_right_back < 75)){
 		
-		UART_transmitByte((strong1+ PID_value)); //stark
+		UART_transmitByte((strong2+ PID_value)); //stark
 		
-		}else{
+	}*/else{
 		UART_transmitByte(PID_value);
 	}
 	
@@ -338,28 +250,32 @@ void rotate_90_right(void){
 	angle = 0;
 	stop_servos();
 	
-	/*if(direction == north){
-		//direction= east;
-		//UART_usb_transmitByte('e');
+	if(direction == north){
+		direction= east;
+		UART_usb_transmitByte('e');
 		//y -= 1;
-		y+=1;
+		
 	}else if(direction == east){
-		//direction = south;
-		//UART_usb_transmitByte('s');
+		direction = south;
+		UART_usb_transmitByte('s');
 		//x -= 1;
-		x+=1;
+		
 	}else if(direction == south){
-		//direction = west;
-		//UART_usb_transmitByte('w');
+		direction = west;
+		UART_usb_transmitByte('w');
 		//y += 1;
-		y-=1;
+		
 	}else if (direction == west){
 		direction = north;
-		//UART_usb_transmitByte('n');
+		UART_usb_transmitByte('n');
 		//x += 1;
-		x-=1;
-	}*/
-	
+		
+	} 
+	if(s){
+		start_x=0;
+		start_y=0;
+		s=0;
+	}
 	//count_walls-=1;
 	PORTD &= 0b00000000;
 	//send_coordinates();
@@ -392,7 +308,7 @@ void rotate_90_left(void){
 		direction = south;
 		UART_usb_transmitByte('s');
 		_delay_ms(500);
-		UART_usb_transmitByte('k');
+		UART_usb_transmitByte('k'); 
 	
 		//y -= 1;
 	}else if(direction == south){
@@ -470,4 +386,121 @@ void send_coordinates(){
 	
 	
 }
+void automode(void){
 
+	pid_forward();
+
+
+	if (error >= 55){
+	
+		
+		PORTD |= 0b10000000;
+		PORTD &= 0b10000000;
+		cli();
+		forward();
+		_delay_ms(5000);
+		hard_stop();
+		if(direction == north){
+		
+			//y -= 1;
+			y+=1;
+		}else if(direction == east){
+		
+			//x -= 1;
+			x+=1;
+		}else if(direction == south){
+		
+			//y += 1;
+			y-=1;
+		}else if (direction == west){
+			//x += 1;
+			x-=1;
+		}
+		
+		PORTD &= 0b00000000;
+		sei();
+		_delay_ms(10000);
+		rotate_90_right();
+		_delay_ms(10000);
+		stop_servos();
+		_delay_ms(10000);
+	//lägg till här
+		forward();
+		_delay_ms(10000);
+		
+	
+	
+		}else if ((error <=55) && (sensor_front >= 159) && (sensor_left >=120)){ //133
+			hard_stop();
+			_delay_ms(10000);
+			rotate_90_left();
+			stop_servos();
+			_delay_ms(10000);
+			rotate_90_left();
+			stop_servos();
+			_delay_ms(10000);
+			while(sensor_left >= 181){
+				if (error >= 55){
+					PORTD |= 0b10000000;
+					PORTD &= 0b10000000;
+					cli();
+					forward();
+					_delay_ms(5000);
+					hard_stop();
+					if(direction == north){
+						
+						//y -= 1;
+						y+=1;
+						}else if(direction == east){
+						
+						//x -= 1;
+						x+=1;
+						}else if(direction == south){
+						
+						//y += 1;
+						y-=1;
+						}else if (direction == west){
+						//x += 1;
+						x-=1;
+					}
+					PORTD &= 0b00000000;
+					sei();
+					_delay_ms(5000);
+					rotate_90_right();
+					_delay_ms(10000);
+					stop_servos();
+					_delay_ms(5000);
+					forward();
+					_delay_ms(10000);
+					stop_servos();
+			
+				}else{
+					pid_forward();
+			}
+		
+		}
+	
+	
+		} else if ((error <=55) && (sensor_front >= 159)){
+			hard_stop();
+			_delay_ms(10000);
+			rotate_90_left();
+			stop_servos();
+			_delay_ms(10000);
+		}else{
+			pid_forward();
+	}
+
+	// 43(ca 80 cm) stanna om ö hittad
+
+
+
+
+
+}
+void hard_stop(void){
+	stop_servos();
+	backward();
+	_delay_ms(2250);
+	stop_servos();
+}
