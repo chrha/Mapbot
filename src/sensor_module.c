@@ -1,6 +1,6 @@
 #include <avr/io.h>
 #define F_CPU 14745600
-#include <math.h>
+
 #include <util/delay.h>
 #include "UART_sensor.h"
 #include "I2C.h"
@@ -55,6 +55,7 @@ int main(void)
 		
 		// notera att PINB4 inte funkar.enbart jordning.
 		
+		
 		temp = PIND & 0b10000000;
 		if(temp == 0b10000000)
 		{
@@ -69,14 +70,12 @@ int main(void)
 		sensor_right_front();
 		sensor_right_back();
 		
-		lenght_left();
-		lenght_right();
+		sensor_distance();
 		
 		sensor_front();
 		sensor_left();
 		
-		lenght_left();
-		lenght_right();
+		sensor_distance();
 		
 		sensor_gyro();
 		
@@ -197,7 +196,7 @@ void sensor_distance(void){
 	average_distance = (left_distance + right_distance) / 2;
 	
 	
-	if ( average_distance >= 24){	// ha 24. 28 på prick. 30 stor.
+	if ( average_distance >= 29.5){ //ha 24. 28 på prick. 30 stor.
 		
 		PORTB |= 0b00000111;
 		PORTB &= 0b00000111;
