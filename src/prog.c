@@ -21,7 +21,7 @@ uint8_t temp1;
 uint8_t temp2;
 uint8_t temp3;
 uint8_t temp4;
-const unsigned char const_speed = 150;
+const unsigned char const_speed = 100;
 int main(void)
 {
 	DDRA =0x00;
@@ -132,7 +132,7 @@ void where_to_go(void)
 
 */
 
-/*
+
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
@@ -171,9 +171,9 @@ signed char D;
 signed char PID_value;
 volatile signed char error=0;
 
-signed char strong1=30;
+signed char strong1=20;
 signed char strong2=-20;
-signed char weak1=10;
+signed char weak1=6;
 signed char weak2=-5; // -10
 
 volatile uint8_t temp0;
@@ -369,7 +369,7 @@ void PID(){
 	if(I >= 100){  // limit wind up
 		I=100;
 	}
-	PID_value= KP*P + KD* D + KI*I;
+	PID_value= (int8_t)((KP*P + KD* D + KI*I) * 0.7);
 	
 	latest_error=error;
 	//126
@@ -389,7 +389,7 @@ void PID(){
 		
 		UART_transmitByte((strong2+ PID_value)); //stark
 		
-	}*/else{
+	}*/else{ // kommentera bort här
 		UART_transmitByte(PID_value);
 	}
 	
@@ -623,7 +623,7 @@ void automode(void){
 			rotate_90_left();
 			_delay_ms(2000);
 			forward();
-			while(sensor_front <= 161){}
+			while(sensor_front <= 184){}
 			stop_servos();
 			_delay_ms(2000);
 			rotate_90_left();
@@ -640,7 +640,7 @@ void automode(void){
 		rotate_90_left();
 		_delay_ms(2000);
 		forward();
-		while(sensor_front <= 161){}
+		while(sensor_front <= 184){}
 		stop_servos();
 		_delay_ms(2000);
 		rotate_90_left();
@@ -659,7 +659,7 @@ void automode(void){
 		PORTD &= 0b10000000;
 		cli();
 		forward();
-		_delay_ms(5000);
+		_delay_ms(8000);
 		hard_stop();
 		if(direction == north){
 		
@@ -690,8 +690,8 @@ void automode(void){
 		}
 	//lägg till här
 		forward();
-		_delay_ms(10000);
-		}else if ((error <=55) && (sensor_front >= 161) && (sensor_left >=120)){ //133
+		_delay_ms(13000);
+		}else if ((error <=55) && (sensor_front >= 184) && (sensor_left >=120)){ //133 front=161
 			
 			hard_stop();
 			_delay_ms(1000);
@@ -705,7 +705,7 @@ void automode(void){
 					PORTD &= 0b10000000;
 					cli();
 					forward();
-					_delay_ms(5000);
+					_delay_ms(8000);
 					hard_stop();
 					if(direction == north){
 						
@@ -730,7 +730,7 @@ void automode(void){
 					_delay_ms(2000);
 
 					forward();
-					_delay_ms(10000);
+					_delay_ms(13000);
 			
 				}else{
 					pid_forward();
@@ -739,7 +739,7 @@ void automode(void){
 			}
 	
 	
-		} else if ((error <=55) && (sensor_front >= 161)){
+		} else if ((error <=55) && (sensor_front >= 184)){
 			if(enable_count_island){
 				end_of_island.pos_x=x_curr_values[0];
 				end_of_island.pos_y=y_curr_values[0];
