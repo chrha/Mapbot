@@ -204,6 +204,7 @@ void sendData(void);
 void send_coordinates(int8_t x,int8_t y);
 void automode(void);
 void hard_stop(void);
+void discover_island(void);
 double angle = 0;
 double tempG;
 double gyroData = 0;
@@ -217,7 +218,7 @@ int8_t find_island = 1;
 int8_t draw_island=1;
 int8_t check_island=0;
 uint8_t count_start_position=0;
-uint8_t enable_count_island=0;
+uint8_t enable_find_island=0;
 struct coordinate end_of_island;
 
 int main(void)
@@ -242,6 +243,7 @@ int main(void)
 
 	while(1)
 	{
+		discover_island();
 		automode();
 	
 
@@ -611,48 +613,6 @@ void send_coordinates(int8_t x,int8_t y){
 }
 void automode(void){
 
-
-	if(check_island){
-
-		draw_island=0;
-		enable_count_island=1;
-		if((current_pos.pos_x == x_curr_values[0]) && (current_pos.pos_y == y_curr_values[0])){
-			
-			stop_servos();
-			_delay_ms(2000);
-			rotate_90_left();
-			_delay_ms(2000);
-			forward();
-			while(sensor_front <= 184){}
-			stop_servos();
-			_delay_ms(2000);
-			rotate_90_left();
-			_delay_ms(2000);
-			draw_island=1;
-			check_island=0;
-			
-		}
-	}
-
-	if((current_pos.pos_x==end_of_island.pos_x) && (current_pos.pos_y==end_of_island.pos_y)){
-		stop_servos();
-		_delay_ms(2000);
-		rotate_90_left();
-		_delay_ms(2000);
-		forward();
-		while(sensor_front <= 184){}
-		stop_servos();
-		_delay_ms(2000);
-		rotate_90_left();
-		_delay_ms(2000);	
-		end_of_island.pos_x=-100;
-		end_of_island.pos_y=-100;
-	}
-
-	pid_forward();
-
-	
-
 	if (error >= 55){
 	
 		PORTD |= 0b10000000;
@@ -683,19 +643,25 @@ void automode(void){
 		_delay_ms(2000);
 		rotate_90_right();
 		_delay_ms(2000);
-		if(enable_count_island){
-			end_of_island.pos_x=x_curr_values[0];
-			end_of_island.pos_y=y_curr_values[0];
-			enable_count_island=0;
+		if(enable_find_island){
+			end_of_island.pos_x=x_values[0];
+			end_of_island.pos_y=y_values[0];
+			enable_find_island=0;
 		}
 	//lägg till här
 		forward();
-		_delay_ms(13000);
-		}else if ((error <=55) && (sensor_front >= 184) && (sensor_left >=120)){ //133 front=161
+		_delay_ms(12000);
+		}else if ((error <=55) && (sensor_front >= 188) && (sensor_left >=120)){ //133 front=161
 			
 			hard_stop();
 			_delay_ms(1000);
 			rotate_90_left();
+			_delay_ms(1000);
+			pid_forward();
+			while(sensor_front <=188){
+				
+			}
+			stop_servos();
 			_delay_ms(1000);
 			rotate_90_left();
 			_delay_ms(1000);
@@ -730,7 +696,7 @@ void automode(void){
 					_delay_ms(2000);
 
 					forward();
-					_delay_ms(13000);
+					_delay_ms(12000);
 			
 				}else{
 					pid_forward();
@@ -739,12 +705,8 @@ void automode(void){
 			}
 	
 	
-		} else if ((error <=55) && (sensor_front >= 184)){
-			if(enable_count_island){
-				end_of_island.pos_x=x_curr_values[0];
-				end_of_island.pos_y=y_curr_values[0];
-				enable_count_island=0;
-			}
+		} else if ((error <=55) && (sensor_front >= 188)){
+			
 			hard_stop();
 			_delay_ms(2000);
 			rotate_90_left();
@@ -754,7 +716,7 @@ void automode(void){
 		}
 
 		
-	
+		pid_forward();	
 }
 
 
@@ -762,12 +724,50 @@ void automode(void){
 void hard_stop(void){
 	stop_servos();
 	backward();
-	_delay_ms(2250);
+	_delay_ms(2000);
 	stop_servos();
 }
 
 
+void discover_island(){
+	if(check_island){
 
+		draw_island=0;
+		
+		if((current_pos.pos_x == x_curr_values[0]) && (current_pos.pos_y == y_curr_values[0])){
+			enable_find_island=1;
+			stop_servos();
+			_delay_ms(2000);
+			rotate_90_left();
+			_delay_ms(2000);
+			forward();
+			while(sensor_front <= 188){}
+			stop_servos();
+			_delay_ms(2000);
+			rotate_90_left();
+			_delay_ms(2000);
+			draw_island=1;
+			check_island=0;
+		
+		}
+	}
+
+	if((current_pos.pos_x==end_of_island.pos_x) && (current_pos.pos_y==end_of_island.pos_y)){
+		stop_servos();
+		_delay_ms(2000);
+		rotate_90_left();
+		_delay_ms(2000);
+		forward();
+		while(sensor_front <= 188){}
+		stop_servos();
+		_delay_ms(2000);
+		rotate_90_left();
+		_delay_ms(2000);
+		end_of_island.pos_x=-100;
+		end_of_island.pos_y=-100;
+		draw_island=0;
+	}
+}
 
 
 
@@ -851,18 +851,7 @@ int main(void)
 		
 		sensor_distance();
 		
-		sensor_gyro();
-		
-		
-		
-		
-
-		
-	
-		
-		
-		
-			
+		sensor_gyro();				
 		
 	}
 }
@@ -971,7 +960,7 @@ void sensor_distance(void){
 	average_distance = (left_distance + right_distance) / 2;
 	
 	
-	if ( average_distance >= 29.5){ //ha 24. 28 på prick. 30 stor.
+	if ( average_distance >= 30){ //ha 24. 29.5 på prick. 30 stor.
 		
 		PORTB |= 0b00000111;
 		PORTB &= 0b00000111;
