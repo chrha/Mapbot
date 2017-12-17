@@ -1,4 +1,3 @@
-
 /*
 #include <avr/io.h>
 #include <util/delay.h>
@@ -130,8 +129,8 @@ void where_to_go(void)
 	}
 } 
 
-*/
 
+*/
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -144,6 +143,8 @@ void where_to_go(void)
 #include "UART_sensor.h"
 #include <stdbool.h>
 #include "cordlist.h"
+#include <avr/wdt.h>
+
 
 volatile unsigned char data_received_usb;
 volatile unsigned char data_received_sensor;
@@ -205,6 +206,7 @@ void send_coordinates(int8_t x,int8_t y);
 void automode(void);
 void hard_stop(void);
 void discover_island(void);
+void add_island(void);
 double angle = 0;
 double tempG;
 double gyroData = 0;
@@ -215,11 +217,11 @@ struct coordinate K;
 void PID(void);
 int8_t one = 1;
 int8_t find_island = 1;
-int8_t draw_island=1;
 int8_t check_island=0;
 uint8_t count_start_position=0;
 uint8_t enable_find_island=0;
 struct coordinate end_of_island;
+volatile char mode = 'p';
 
 int main(void)
 {
@@ -231,7 +233,7 @@ int main(void)
 	end_of_island.pos_y=-2;
 
 	Q.pos_x=0;
-	Q.pos_y=0;
+	Q.pos_y=
 	DDRB = 0xFF;
 	DDRD = 0xFF;
 	DDRA =0x00;
@@ -243,8 +245,12 @@ int main(void)
 
 	while(1)
 	{
+	
+	
 		discover_island();
 		automode();
+		
+		
 	
 
 	}
@@ -253,12 +259,14 @@ int main(void)
 }
 ISR(USART0_RX_vect){
 	
-	data_received_usb= UART_usb_recieveByte();
+	data_received_usb= UDR0;
+	
 	
 }
 ISR(USART1_RX_vect){
 	
 	data_received_sensor = UDR1;
+	
 	
 	temp0 = PINA & 0b00000111;
 	
@@ -294,48 +302,13 @@ ISR(USART1_RX_vect){
 			current_pos.pos_x -= 1;
 		}
 
-		if(draw_island){
-			UART_usb_transmitByte('k');
-		}
+		UART_usb_transmitByte('k');
 		
 		
 
 
+		add_island();
 		
-		if (find_island){	
-			if(rmv_position(current_pos)){  //rmv_position(current_pos);
-				if((sensor_left >= 100) && (sensor_left <= 254)){
-					UART_usb_transmitByte('o');
-					Q.pos_x=current_pos.pos_x;
-					Q.pos_y=current_pos.pos_y;
-					insert_position(Q,Q);
-					
-				}else if((sensor_left >= 50) && (sensor_left <= 99)){
-					UART_usb_transmitByte('z');
-					K.pos_x=current_pos.pos_x;
-					K.pos_y=current_pos.pos_y;
-					if (direction == north){
-						Q.pos_x=(current_pos.pos_x - 1);
-						Q.pos_y=current_pos.pos_y;
-						insert_position(Q,K);
-					}else if(direction == south){
-						Q.pos_x=(current_pos.pos_x + 1);
-						Q.pos_y=current_pos.pos_y;
-						insert_position(Q,K);
-					}else if(direction == east){
-						Q.pos_x=current_pos.pos_x;
-						Q.pos_y=(current_pos.pos_y + 1);
-						insert_position(Q,K);
-					}else if(direction == west){
-						Q.pos_x=current_pos.pos_x;
-						Q.pos_y=(current_pos.pos_y - 1);
-						insert_position(Q,K);
-					}
-				}
-			}
-
-		}
-	
 
 		if((current_pos.pos_x == start_pos.pos_x) && (current_pos.pos_y == start_pos.pos_y)){
 			find_island=0;
@@ -343,6 +316,7 @@ ISR(USART1_RX_vect){
 			start_pos.pos_x=-1;
 			start_pos.pos_y=-1;
 			s=1;
+			UART_usb_transmitByte('t');
 			count_start_position +=1;
 			if(count_start_position==2){
 				stop_servos();
@@ -350,11 +324,12 @@ ISR(USART1_RX_vect){
 			}
 		}
 
+
 	
 	}
 	gyroData = (int16_t)(sensor_gyro_low | (int16_t)(sensor_gyro_high <<8));
 	gyroData *= 0.07;
-
+	
 }
 
 void PID(){
@@ -452,35 +427,32 @@ void rotate_90_right(void){
 	
 	if(direction == north){
 		direction= east;
-
-		if(draw_island){
-			UART_usb_transmitByte('e');
-		}
+		UART_usb_transmitByte('e');
 		
 		//y -= 1;
 		
 	}else if(direction == east){
 		direction = south;
 		
-		if(draw_island){
-			UART_usb_transmitByte('s');
-		}
+		
+		UART_usb_transmitByte('s');
+		
 		//x -= 1;
 		
 	}else if(direction == south){
 		direction = west;
 
-		if(draw_island){
-			UART_usb_transmitByte('w');
-		}
+		
+		UART_usb_transmitByte('w');
+		
 		//y += 1;
 		
 	}else if (direction == west){
 		direction = north;
 
-		if(draw_island){
-			UART_usb_transmitByte('n');
-		}
+		
+		UART_usb_transmitByte('n');
+		
 	
 		//x += 1;
 		
@@ -514,40 +486,40 @@ void rotate_90_left(void){
 	if(direction == north){
 		direction= west;
 		//x -= 1;
-		if(draw_island){
-			UART_usb_transmitByte('w');
-			_delay_ms(500);
-			UART_usb_transmitByte('k');
-		}
+		
+		UART_usb_transmitByte('w');
+		_delay_ms(500);
+		UART_usb_transmitByte('k');
+		
 		
 		
 	}else if(direction == west){
 		direction = south;
 
-		if(draw_island){
-			UART_usb_transmitByte('s');
-			_delay_ms(500);
-			UART_usb_transmitByte('k');
-		}
+		
+		UART_usb_transmitByte('s');
+		_delay_ms(500);
+		UART_usb_transmitByte('k');
+		
 	
 		//y -= 1;
 	}else if(direction == south){
 		direction = east;
 	
-		if(draw_island){
-			UART_usb_transmitByte('e');
-			_delay_ms(500);
-			UART_usb_transmitByte('k');
-		}
+		
+		UART_usb_transmitByte('e');
+		_delay_ms(500);
+		UART_usb_transmitByte('k');
+		
 		//x += 1;
 	}else if (direction == east){
 		direction = north;
 		
-		if(draw_island){
-			UART_usb_transmitByte('n');
-			_delay_ms(500);
-			UART_usb_transmitByte('k');
-		}
+		
+		UART_usb_transmitByte('n');
+		_delay_ms(500);
+		UART_usb_transmitByte('k');
+		
 		//y += 1;
 	}
 
@@ -557,6 +529,45 @@ void rotate_90_left(void){
 	//send_coordinates();
 	_delay_ms(10);
 }
+
+void add_island(void){
+	if (find_island){
+		if(rmv_position(current_pos)){  //rmv_position(current_pos);
+			if((sensor_left >= 122) && (sensor_left <= 254)){
+				UART_usb_transmitByte('o');
+				Q.pos_x=current_pos.pos_x;
+				Q.pos_y=current_pos.pos_y;
+				insert_position(Q,Q);
+				
+				}else if((sensor_left >= 58) && (sensor_left <= 69)){
+				UART_usb_transmitByte('z');
+				K.pos_x=current_pos.pos_x;
+				K.pos_y=current_pos.pos_y;
+				if (direction == north){
+					Q.pos_x=(current_pos.pos_x - 1);
+					Q.pos_y=current_pos.pos_y;
+					insert_position(Q,K);
+					}else if(direction == south){
+					Q.pos_x=(current_pos.pos_x + 1);
+					Q.pos_y=current_pos.pos_y;
+					insert_position(Q,K);
+					}else if(direction == east){
+					Q.pos_x=current_pos.pos_x;
+					Q.pos_y=(current_pos.pos_y + 1);
+					insert_position(Q,K);
+					}else if(direction == west){
+					Q.pos_x=current_pos.pos_x;
+					Q.pos_y=(current_pos.pos_y - 1);
+					insert_position(Q,K);
+				}
+			}
+		}
+
+	}
+	
+
+}
+
 
 void sendData(){
 	UART_usb_transmitByte('r');
@@ -613,7 +624,7 @@ void send_coordinates(int8_t x,int8_t y){
 }
 void automode(void){
 
-	if (error >= 55){
+	if (error >= 60){
 	
 		PORTD |= 0b10000000;
 		PORTD &= 0b10000000;
@@ -651,22 +662,23 @@ void automode(void){
 	//lägg till här
 		forward();
 		_delay_ms(12000);
-		}else if ((error <=55) && (sensor_front >= 188) && (sensor_left >=120)){ //133 front=161
+		}else if ((error <=60) && (sensor_front >= 190) && (sensor_left >=120)){ //133 front=161
 			
 			hard_stop();
 			_delay_ms(1000);
 			rotate_90_left();
 			_delay_ms(1000);
-			pid_forward();
-			while(sensor_front <=188){
+			forward();
+			while(sensor_front <=190){
 				
 			}
 			stop_servos();
 			_delay_ms(1000);
 			rotate_90_left();
+			add_island();
 			_delay_ms(1000);
 			while(sensor_left >= 181){
-				if (error >= 55){
+				if (error >= 60){
 					PORTD |= 0b10000000;
 					PORTD &= 0b10000000;
 					cli();
@@ -705,7 +717,7 @@ void automode(void){
 			}
 	
 	
-		} else if ((error <=55) && (sensor_front >= 188)){
+		} else if ((error <=60) && (sensor_front >= 190)){
 			
 			hard_stop();
 			_delay_ms(2000);
@@ -732,7 +744,7 @@ void hard_stop(void){
 void discover_island(){
 	if(check_island){
 
-		draw_island=0;
+		
 		
 		if((current_pos.pos_x == x_curr_values[0]) && (current_pos.pos_y == y_curr_values[0])){
 			enable_find_island=1;
@@ -741,12 +753,13 @@ void discover_island(){
 			rotate_90_left();
 			_delay_ms(2000);
 			forward();
-			while(sensor_front <= 188){}
+			while(sensor_front <= 190){}
+			UART_usb_transmitByte('t');
 			stop_servos();
 			_delay_ms(2000);
 			rotate_90_left();
 			_delay_ms(2000);
-			draw_island=1;
+			
 			check_island=0;
 		
 		}
@@ -755,23 +768,25 @@ void discover_island(){
 	if((current_pos.pos_x==end_of_island.pos_x) && (current_pos.pos_y==end_of_island.pos_y)){
 		stop_servos();
 		_delay_ms(2000);
+		UART_usb_transmitByte('t');
 		rotate_90_left();
 		_delay_ms(2000);
 		forward();
-		while(sensor_front <= 188){}
+		while(sensor_front <= 190){}
 		stop_servos();
 		_delay_ms(2000);
 		rotate_90_left();
 		_delay_ms(2000);
 		end_of_island.pos_x=-100;
 		end_of_island.pos_y=-100;
-		draw_island=0;
+		
 	}
 }
 
 
 
- /*
+
+/*
 #include <avr/io.h>
 #define F_CPU 14745600
 
@@ -811,6 +826,10 @@ float left_distance=0;
 float right_distance=0;
 uint8_t average_front_distance=0;
 uint8_t temp=0;
+uint8_t buffer_index=0;
+uint8_t buffer[10] = {0,0,0,0,0,0,0,0,0,0};
+uint8_t average_left_value;
+int tmp;
 int main(void)
 {
 	DDRB = 0b01001111;
@@ -851,7 +870,8 @@ int main(void)
 		
 		sensor_distance();
 		
-		sensor_gyro();				
+		sensor_gyro();	
+		
 		
 	}
 }
@@ -887,7 +907,7 @@ void terminal_view (uint8_t adc_channel1, uint8_t adc_channel2)
 	adc_channel2&=0b00000111;
 	char mychar1[5];
 	char mychar2[5];
-
+	/*
 	SendString("ADC_value1: ");
 	sprintf(mychar1, "%04d", adc_read(adc_channel1));
 	UART_transmitByte(mychar1[1]);
@@ -897,7 +917,7 @@ void terminal_view (uint8_t adc_channel1, uint8_t adc_channel2)
 	_delay_ms(50);
 	
 	SendString("   ADC_value2: ");
-	sprintf(mychar2, "%04d", adc_read(adc_channel2));
+	sprintf(mychar2, "%04d", average_left_value);
 	UART_transmitByte(mychar2[1]);
 	UART_transmitByte(mychar2[2]);
 	UART_transmitByte(mychar2[3]);
@@ -934,10 +954,17 @@ void sensor_front(){
 
 
 void sensor_left(){
-	
+	buffer[buffer_index]= adc_read(2);
+	buffer_index++;
+	if(buffer_index==10) buffer_index=0;
+	for(int i=0; i<10; i++){
+		tmp+=buffer[i];
+	}
+	average_left_value = (uint8_t)(tmp/10);
+	tmp = 0;
 	PORTB |= (1 << PINB2);
 	PORTB &= 0b00000100;	
-	UART_transmitByte(adc_read(2));
+	UART_transmitByte(average_left_value);
 	_delay_ms(5);
 }
 
@@ -1020,5 +1047,6 @@ uint8_t lenght_right()
 }
 
 
-*/
 
+
+*/
