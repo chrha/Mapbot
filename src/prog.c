@@ -1,4 +1,4 @@
-/*
+
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
@@ -14,13 +14,15 @@ void dir_pid_foreward(signed char pid);
 void dir_foreward(void);
 void dir_backward();
 void where_to_go(void);
+void turn_left(void);
+void turn_right(void);
 signed char pid=0;
 uint8_t temp0;
 uint8_t temp1;
 uint8_t temp2;
 uint8_t temp3;
 uint8_t temp4;
-const unsigned char const_speed = 100;
+const unsigned char const_speed = 80;
 int main(void)
 {
 	DDRA =0x00;
@@ -97,6 +99,23 @@ void rotate_left()
 	OCR3A = 80; // right
 }
 
+void turn_left(){
+	
+	PORTD |= (1 << PORTD1); // Pin PD0 goes high (forward_right)
+	PORTD |= (1 << PORTD0); // Pin PD1 goes high (forward_left)
+	OCR3B = 100; // left
+	OCR3A = 30; // right
+}
+
+void turn_right(){
+	
+	PORTD |= (1 << PORTD1); // Pin PD0 goes high (forward_right)
+	PORTD |= (1 << PORTD0); // Pin PD1 goes high (forward_left)
+
+	OCR3B = 30; // left
+	OCR3A = 100; // right
+}
+
 void where_to_go(void)
 {
 	
@@ -122,16 +141,18 @@ void where_to_go(void)
 	}else if(temp0 == 5){
 		dir_foreward();
 	
-	}
-	else{
+	}else if(temp0 == 6){
+		turn_right();
+	}else if(temp0 == 7){
+		turn_left();
+	}else{
 		OCR3B = 0; 
 		OCR3A = 0;
 	}
 } 
 
 
-*/
-
+/*
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
@@ -172,9 +193,9 @@ signed char D;
 signed char PID_value;
 volatile signed char error=0;
 
-signed char strong1=20;
+signed char strong1=18;
 signed char strong2=-20;
-signed char weak1=6;
+signed char weak1=5;
 signed char weak2=-5; // -10
 
 volatile uint8_t temp0;
@@ -186,7 +207,7 @@ volatile uint8_t south=2;
 volatile uint8_t east=3;
 volatile uint8_t west=4;
 
-volatile uint8_t direction = 1;
+volatile uint8_t direction;
 
 volatile struct coordinate current_pos;
 volatile struct coordinate start_pos;
@@ -207,6 +228,8 @@ void automode(void);
 void hard_stop(void);
 void discover_island(void);
 void add_island(void);
+void turn_right(void);
+void turn_left(void);
 double angle = 0;
 double tempG;
 double gyroData = 0;
@@ -222,7 +245,7 @@ uint8_t count_start_position=0;
 uint8_t enable_find_island=0;
 struct coordinate end_of_island;
 volatile char mode = 'p';
-
+volatile uint8_t switch_mode;
 int main(void)
 {
 	current_pos.pos_x=0;
@@ -231,9 +254,10 @@ int main(void)
 	start_pos.pos_y=-1;
 	end_of_island.pos_x=-2;
 	end_of_island.pos_y=-2;
-
+	direction=north;
+	switch_mode= PINA & 0b00100000;
 	Q.pos_x=0;
-	Q.pos_y=
+	Q.pos_y=0;
 	DDRB = 0xFF;
 	DDRD = 0xFF;
 	DDRA =0x00;
@@ -245,10 +269,14 @@ int main(void)
 
 	while(1)
 	{
-	
-	
-		discover_island();
-		automode();
+		switch_mode= PINA & 0b00100000;
+		if(switch_mode == 0b00100000){
+			
+		}else if(switch_mode == 0b00000000){
+			discover_island();
+			automode();
+		}
+		
 		
 		
 	
@@ -261,6 +289,22 @@ ISR(USART0_RX_vect){
 	
 	data_received_usb= UDR0;
 	
+	if (switch_mode == 0b00100000){
+		if(data_received_usb == 'w'){
+			forward();
+		}else if(data_received_usb == 'a'){
+			turn_left();
+		}else if(data_received_usb == 's'){
+			backward();
+		}else if(data_received_usb == 'd'){
+			turn_right();
+		}else if(data_received_usb == '0'){
+			stop_servos();
+		}
+
+
+	}
+
 	
 }
 ISR(USART1_RX_vect){
@@ -346,7 +390,7 @@ void PID(){
 	if(I >= 100){  // limit wind up
 		I=100;
 	}
-	PID_value= (int8_t)((KP*P + KD* D + KI*I) * 0.7);
+	PID_value= (int8_t)((KP*P + KD* D + KI*I) * 0.53);
 	
 	latest_error=error;
 	//126
@@ -366,7 +410,7 @@ void PID(){
 		
 		UART_transmitByte((strong2+ PID_value)); //stark
 		
-	}*/else{ // kommentera bort här
+	}else{ // kommentera bort här
 		UART_transmitByte(PID_value);
 	}
 	
@@ -408,6 +452,21 @@ void forward(){
 	PORTB &= 0b00010100;
 	_delay_ms(10);
 }
+
+
+void turn_right(){
+
+	PORTB |= 0b00011000;
+	PORTB &= 0b00011000;
+	_delay_ms(10);
+}
+
+void turn_left(){
+	PORTB |= 0b00011100;
+	PORTB &= 0b00011100;
+	_delay_ms(10);
+}
+
 
 void rotate_90_right(void){
 	rotate_right();
@@ -533,13 +592,13 @@ void rotate_90_left(void){
 void add_island(void){
 	if (find_island){
 		if(rmv_position(current_pos)){  //rmv_position(current_pos);
-			if((sensor_left >= 122) && (sensor_left <= 254)){
+			if((sensor_left >= 100) && (sensor_left <= 225)){
 				UART_usb_transmitByte('o');
 				Q.pos_x=current_pos.pos_x;
 				Q.pos_y=current_pos.pos_y;
 				insert_position(Q,Q);
 				
-				}else if((sensor_left >= 58) && (sensor_left <= 69)){
+				}else if((sensor_left >= 55) && (sensor_left <= 92)){
 				UART_usb_transmitByte('z');
 				K.pos_x=current_pos.pos_x;
 				K.pos_y=current_pos.pos_y;
@@ -630,7 +689,7 @@ void automode(void){
 		PORTD &= 0b10000000;
 		cli();
 		forward();
-		_delay_ms(8000);
+		_delay_ms(10000);
 		hard_stop();
 		if(direction == north){
 		
@@ -661,15 +720,15 @@ void automode(void){
 		}
 	//lägg till här
 		forward();
-		_delay_ms(12000);
-		}else if ((error <=60) && (sensor_front >= 190) && (sensor_left >=120)){ //133 front=161
+		_delay_ms(14000);
+		}else if ((error <=60) && (sensor_front >= 225) && (sensor_left >=120)){ //133 front=161
 			
 			hard_stop();
 			_delay_ms(1000);
 			rotate_90_left();
 			_delay_ms(1000);
 			forward();
-			while(sensor_front <=190){
+			while(sensor_front <=200){
 				
 			}
 			stop_servos();
@@ -683,7 +742,7 @@ void automode(void){
 					PORTD &= 0b10000000;
 					cli();
 					forward();
-					_delay_ms(8000);
+					_delay_ms(10000);
 					hard_stop();
 					if(direction == north){
 						
@@ -708,7 +767,7 @@ void automode(void){
 					_delay_ms(2000);
 
 					forward();
-					_delay_ms(12000);
+					_delay_ms(14000);
 			
 				}else{
 					pid_forward();
@@ -717,14 +776,12 @@ void automode(void){
 			}
 	
 	
-		} else if ((error <=60) && (sensor_front >= 190)){
+		} else if ((error <=60) && (sensor_front >= 225)){
 			
 			hard_stop();
 			_delay_ms(2000);
 			rotate_90_left();
 			_delay_ms(2000);
-		}else{
-			pid_forward();
 		}
 
 		
@@ -753,13 +810,12 @@ void discover_island(){
 			rotate_90_left();
 			_delay_ms(2000);
 			forward();
-			while(sensor_front <= 190){}
-			UART_usb_transmitByte('t');
+			while(sensor_front <= 210){}
 			stop_servos();
 			_delay_ms(2000);
 			rotate_90_left();
 			_delay_ms(2000);
-			
+			UART_usb_transmitByte('t');
 			check_island=0;
 		
 		}
@@ -772,7 +828,7 @@ void discover_island(){
 		rotate_90_left();
 		_delay_ms(2000);
 		forward();
-		while(sensor_front <= 190){}
+		while(sensor_front <= 210){}
 		stop_servos();
 		_delay_ms(2000);
 		rotate_90_left();
@@ -782,7 +838,6 @@ void discover_island(){
 		
 	}
 }
-
 
 
 
@@ -1047,6 +1102,5 @@ uint8_t lenght_right()
 }
 
 
-
-
 */
+
