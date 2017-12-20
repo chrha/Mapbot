@@ -1,4 +1,3 @@
-
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
@@ -98,19 +97,18 @@ int main(void)
 	
 }
 ISR(USART0_RX_vect){
-	
+	//Receive data from bluthooth 
 	data_received_usb= UART_usb_recieveByte();
 	
 }
 ISR(USART1_RX_vect){
-	
+	//Recevive data from sensormodule
 	data_received_sensor = UDR1;
-	
+	//Read pin to check which sensor 
 	temp0 = PINA & 0b00000111;
-	
+	//Check which sensor
 	if(temp0 == 1){
 		sensor_right_front= data_received_sensor;
-		
 	}
 	else if(temp0 == 2){
 		sensor_right_back=data_received_sensor+5;
